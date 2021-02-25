@@ -24,7 +24,7 @@ module "enable_acm" {
 
   service_account_key_file = var.service_account_key_file
   create_cmd_entrypoint    = "gcloud"
-  create_cmd_body          = "alpha container hub config-management enable --project ${var.project_id}"
+  create_cmd_body          = "alpha container hub config-management enable --project ${var.project_id} --log-http"
   destroy_cmd_entrypoint   = "gcloud"
   destroy_cmd_body         = "alpha container hub config-management disable --force --project ${var.project_id}"
 }
