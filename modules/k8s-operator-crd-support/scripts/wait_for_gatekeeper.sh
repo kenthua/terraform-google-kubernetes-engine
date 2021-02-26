@@ -71,6 +71,24 @@ if [ "$#" -lt 3 ]; then
     exit 1
 fi
 
+is_service_up() {
+    SLEEP=https://raw.githubusercontent.com/istio/istio/master/samples/sleep/sleep.yaml
+    CHECK_URL=https://gatekeeper-webhook-service.gatekeeper-system.svc:443/v1/admitlabel?timeout=3s
+    kubectl --context "${1}" -n "${2}" apply -f ${SLEEP} &> /dev/null
+    POD=$(kubectl --context "${1}" -n "${2}" get po -l app=sleep -o jsonpath="{.items[0].metadata.name}")
+    kubectl --context "${1}" -n "${2}" exec ${POD} -- curl "${CHECK_URL}" -I -k -s
+    export exit_code=${?}
+    while [ ! " ${exit_code} " -eq 0 ]
+    do
+        sleep 5
+        echo -e "Waiting for gatekeeper endpoint to listen on ${1}..."
+        POD=$(kubectl --context "${1}" -n "${2}" get po -l app=sleep -o jsonpath="{.items[0].metadata.name}")
+        kubectl --context "${1}" -n "${2}" exec ${POD} -- curl "${CHECK_URL}" -I -k -s
+        export exit_code=${?}
+    done
+    kubectl --context "${1}" -n "${2}" delete -f ${SLEEP} &> /dev/null
+}
+
 PROJECT_ID=$1
 CLUSTER_NAME=$2
 CLUSTER_LOCATION=$3
@@ -83,10 +101,12 @@ if [ -z ${USE_EXISTING_CONTEXT+x} ]; then
     # GKE Cluster. Use the GKE cluster context
     is_deployment_ready gke_"${PROJECT_ID}"_"${CLUSTER_LOCATION}"_"${CLUSTER_NAME}" gatekeeper-system gatekeeper-controller-manager
     is_service_ready gke_"${PROJECT_ID}"_"${CLUSTER_LOCATION}"_"${CLUSTER_NAME}" gatekeeper-system gatekeeper-webhook-service
+    is_service_up gke_"${PROJECT_ID}"_"${CLUSTER_LOCATION}"_"${CLUSTER_NAME}" default
 else
     echo "USE_EXISTING_CONTEXT variable is set. Using current context to wait for deployment to be ready."
     # Get the current context. This can be used for non GKE Clusters
     CURRENT_CONTEXT=$(kubectl config current-context)
     is_deployment_ready "${CURRENT_CONTEXT}" gatekeeper-system gatekeeper-controller-manager
     is_service_ready "${CURRENT_CONTEXT}" gatekeeper-system gatekeeper-webhook-service
+    is_service_up "${CURRENT_CONTEXT}" default
 fi
