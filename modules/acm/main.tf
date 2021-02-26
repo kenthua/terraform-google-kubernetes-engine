@@ -21,6 +21,8 @@ module "enable_acm" {
   platform              = "linux"
   upgrade               = true
   additional_components = ["alpha"]
+  # https://github.com/terraform-google-modules/terraform-google-kubernetes-engine/issues/767
+  skip_provisioners     = true
 
   service_account_key_file = var.service_account_key_file
   create_cmd_entrypoint    = "gcloud"

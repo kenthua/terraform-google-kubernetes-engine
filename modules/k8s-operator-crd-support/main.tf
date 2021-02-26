@@ -32,6 +32,8 @@ module "k8sop_manifest" {
   version = "~> 2.0.2"
   enabled = local.should_download_manifest
 
+  # https://github.com/terraform-google-modules/terraform-google-kubernetes-engine/issues/767
+  skip_provisioners      = true
   create_cmd_entrypoint  = "gsutil"
   create_cmd_body        = "cp ${var.operator_latest_manifest_url} ${local.manifest_path}"
   destroy_cmd_entrypoint = "rm"
